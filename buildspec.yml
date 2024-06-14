@@ -10,7 +10,7 @@ phases:
   build:
     commands:
       - echo "Invoking Lambda function..." 
-      - aws lambda invoke --function-name testing_lambda_func --payload "{\"message\":\"Trigger Lambda\"}"
+      - aws lambda invoke --function-name testing_lambda_func
   post_build:
     commands:
       - echo "Build completed successfully"
