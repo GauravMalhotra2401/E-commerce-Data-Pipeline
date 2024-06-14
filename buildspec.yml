@@ -13,5 +13,5 @@ phases:
   post_build:
     commands:
       - echo "Invoking Lambda function..." 
-      - aws lambda invoke --function-name testing_lambda_func
+      - aws lambda invoke --function-name testing_lambda_func --no-tail
       - echo "Build completed successfully"
