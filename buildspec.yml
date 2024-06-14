@@ -9,9 +9,13 @@ phases:
       - pip install -r requirements.txt -t lib
   build:
     commands:
-       - echo "Building the code..." 
+      - echo "Building the code..." 
+      - zip -r lambda_function.zip .
   post_build:
     commands:
-      - echo "Invoking Lambda function..." 
-      - aws lambda invoke --function-name testing-lambda-function --region 'us-east-1' --debug
-      - echo "Build completed successfully"
+      - echo "Deploying Lambda function..." 
+      - aws lambda update-function-code --function-name testing-lambda-function --zip-file fileb://lambda_function.zip --region us-east-1
+      - echo "Invoking Lambda function..."
+      - aws lambda invoke --function-name testing-lambda-function --region us-east-1 
+      - echo "Lambda function deployed and invoked successfully"
+      - echo "Deployment complete!"
