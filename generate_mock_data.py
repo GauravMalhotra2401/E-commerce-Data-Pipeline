@@ -22,7 +22,7 @@ product_prices = {
 def get_product_price(product_id):
 
     if product_id in product_ids:
-        return product_ids[product_id]
+        return product_prices[product_id]
     else:
          return 0.00
     
