@@ -8,7 +8,7 @@ import csv
 start_date = date(2024, 5, 13)
 end_date = date(2024, 6, 12)
 
-number_of_transactions_everyday = 50
+number_of_transactions_everyday = 10
 def lambda_handler(event, context):
 
     current_date = start_date
