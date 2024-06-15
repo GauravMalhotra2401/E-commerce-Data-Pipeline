@@ -1,0 +1,57 @@
+import sys
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+from awsglue import DynamicFrame
+import gs_derived
+import re
+
+args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+# Script generated for node s3_ecommerce_transactions
+s3_ecommerce_transactions_node1718451651670 = glueContext.create_dynamic_frame.from_catalog(database="e-commerce-db", table_name="s3_input_transactions", transformation_ctx="s3_ecommerce_transactions_node1718451651670")
+
+# Script generated for node redshift-customers-table
+redshiftcustomerstable_node1718454930162 = glueContext.create_dynamic_frame.from_catalog(database="e-commerce-db", table_name="ecommerce_ecommerce_data_dim_customers", redshift_tmp_dir="s3://aws-glue-assets-381492014996-us-east-1/temporary/", transformation_ctx="redshiftcustomerstable_node1718454930162")
+
+# Script generated for node redshift-products-table
+redshiftproductstable_node1718454748573 = glueContext.create_dynamic_frame.from_catalog(database="e-commerce-db", table_name="ecommerce_ecommerce_data_dim_products", redshift_tmp_dir="s3://aws-glue-assets-381492014996-us-east-1/temporary/", transformation_ctx="redshiftproductstable_node1718454748573")
+
+# Script generated for node Renamed Keys for Join - Customers
+RenamedKeysforJoinCustomers_node1718456915114 = ApplyMapping.apply(frame=redshiftcustomerstable_node1718454930162, mappings=[("membership_level", "string", "membership_level", "string"), ("last_name", "string", "last_name", "string"), ("customer_id", "string", "customer_id", "string"), ("first_name", "string", "first_name", "string"), ("email", "string", "email", "string")], transformation_ctx="RenamedKeysforJoinCustomers_node1718456915114")
+
+# Script generated for node Renamed Keys for Join - Products
+RenamedKeysforJoinProducts_node1718456811233 = ApplyMapping.apply(frame=redshiftproductstable_node1718454748573, mappings=[("price", "decimal(10,2)", "price", "decimal(10,2)"), ("product_id", "string", "product_id", "string"), ("category", "string", "category", "string"), ("product_name", "string", "product_name", "string"), ("supplier_id", "string", "supplier_id", "string")], transformation_ctx="RenamedKeysforJoinProducts_node1718456811233")
+
+# Script generated for node Renamed keys for Join - Customers
+RenamedkeysforJoinCustomers_node1718460046254 = ApplyMapping.apply(frame=RenamedKeysforJoinCustomers_node1718456915114, mappings=[("membership_level", "string", "right_membership_level", "string"), ("last_name", "string", "right_last_name", "string"), ("customer_id", "string", "right_customer_id", "string"), ("first_name", "string", "right_first_name", "string"), ("email", "string", "right_email", "string")], transformation_ctx="RenamedkeysforJoinCustomers_node1718460046254")
+
+# Script generated for node Renamed keys for Join - Products
+RenamedkeysforJoinProducts_node1718459995865 = ApplyMapping.apply(frame=RenamedKeysforJoinProducts_node1718456811233, mappings=[("price", "decimal(10,2)", "right_price", "decimal(10,2)"), ("product_id", "string", "right_product_id", "string"), ("category", "string", "right_category", "string"), ("product_name", "string", "right_product_name", "string"), ("supplier_id", "string", "right_supplier_id", "string")], transformation_ctx="RenamedkeysforJoinProducts_node1718459995865")
+
+# Script generated for node Join - Products
+JoinProducts_node1718457151283 = Join.apply(frame1=s3_ecommerce_transactions_node1718451651670, frame2=RenamedkeysforJoinProducts_node1718459995865, keys1=["product_id"], keys2=["right_product_id"], transformation_ctx="JoinProducts_node1718457151283")
+
+# Script generated for node Join - Customers
+JoinCustomers_node1718458016802 = Join.apply(frame1=JoinProducts_node1718457151283, frame2=RenamedkeysforJoinCustomers_node1718460046254, keys1=["customer_id"], keys2=["right_customer_id"], transformation_ctx="JoinCustomers_node1718458016802")
+
+# Script generated for node Change Schema
+ChangeSchema_node1718458414563 = ApplyMapping.apply(frame=JoinCustomers_node1718458016802, mappings=[("price", "double", "price", "decimal"), ("product_id", "string", "product_id", "varchar"), ("customer_id", "string", "customer_id", "varchar"), ("transaction_date", "string", "transaction_date", "date"), ("right_supplier_id", "string", "supplier_id", "varchar"), ("payment_type", "string", "payment_type", "varchar"), ("transaction_id", "string", "transaction_id", "varchar"), ("right_product_name", "string", "product_name", "varchar"), ("quantity", "long", "quantity", "int"), ("status", "string", "status", "varchar"), ("right_email", "string", "customer_email", "varchar")], transformation_ctx="ChangeSchema_node1718458414563")
+
+# Script generated for node Derived Column - Transaction_Type
+DerivedColumnTransaction_Type_node1718460626430 = ChangeSchema_node1718458414563.gs_derived(colName="transaction_type", expr="case when price < 100 then 'small' when price > 100 and price < 500 then 'medium' when price > 500 then 'large' else 'not defined' end")
+
+# Script generated for node Filter
+Filter_node1718461735519 = Filter.apply(frame=DerivedColumnTransaction_Type_node1718460626430, f=lambda row: (bool(re.match("^PROD[0-9]{5}$", row["product_id"])) and bool(re.match("^CUST[0-9]{5}$", row["customer_id"]))), transformation_ctx="Filter_node1718461735519")
+
+# Script generated for node Amazon Redshift
+AmazonRedshift_node1718462397068 = glueContext.write_dynamic_frame.from_options(frame=Filter_node1718461735519, connection_type="redshift", connection_options={"redshiftTmpDir": "s3://aws-glue-assets-381492014996-us-east-1/temporary/", "useConnectionProperties": "true", "dbtable": "ecommerce_data.fact_transactions", "connectionName": "Redshift ecommerce-connection", "preactions": "CREATE TABLE IF NOT EXISTS ecommerce_data.fact_transactions (product_id VARCHAR, price DECIMAL, product_name VARCHAR, supplier_id VARCHAR, customer_id VARCHAR, transaction_date DATE, payment_type VARCHAR, transaction_id VARCHAR, transaction_type VARCHAR, customer_email VARCHAR, quantity INTEGER, status VARCHAR);"}, transformation_ctx="AmazonRedshift_node1718462397068")
+
+job.commit()
