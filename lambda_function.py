@@ -21,7 +21,7 @@ def lambda_handler(event, context):
         file_name = f"transactions_{current_date.strftime('%Y-%m-%d')}.csv"
         print(file_name)
 
-        data = generate_mock_data(current_date.strftime("%Y-%m-%d"), file_name, number_of_transactions_everyday)
+        data = generate_mock_data(current_date.strftime("%Y-%m-%d"),number_of_transactions_everyday)
         print(data)
 
 
